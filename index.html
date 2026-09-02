@@ -289,6 +289,21 @@ const SUPABASE_URL = "https://vipiavenkpxcojcribko.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_A8JY3TqSJIdIA46R9GnyJQ_QNTFQgyI";
 /* ===================================================================== */
 
+if (!window.supabase || typeof window.supabase.createClient !== 'function'){
+  document.body.innerHTML = `
+    <div style="max-width:520px;margin:80px auto;padding:28px;background:#F6F1E4;color:#1C1B17;border-radius:14px;font-family:sans-serif;line-height:1.6;">
+      <h2 style="margin-top:0;">Gagal memuat pustaka Supabase</h2>
+      <p>Halaman ini butuh koneksi internet untuk memuat <code>supabase-js</code> dari CDN. Coba periksa:</p>
+      <ul>
+        <li>Koneksi internet kamu aktif</li>
+        <li>Tidak ada ad-blocker / ekstensi yang memblokir <code>cdn.jsdelivr.net</code></li>
+        <li>Coba buka file ini lewat server lokal (bukan double-click), misalnya: <code>python3 -m http.server</code> lalu buka <code>http://localhost:8000</code></li>
+      </ul>
+      <p>Setelah itu, muat ulang halaman ini.</p>
+    </div>`;
+  throw new Error('Supabase JS library gagal dimuat dari CDN.');
+}
+
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUser = null;
