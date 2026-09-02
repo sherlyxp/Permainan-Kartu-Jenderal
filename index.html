@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Jenderal — Catatan Permainan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --felt-deep:#0E3B2E;
+    --felt-mid:#12483A;
+    --felt-shadow:#092A20;
+    --cream:#F6F1E4;
+    --cream-dim:#EBE3CC;
+    --ink:#1C1B17;
+    --ink-soft:#5B5748;
+    --gold:#C6952C;
+    --gold-deep:#9C7420;
+    --red-suit:#A63D40;
+    --brass-line:rgba(198,149,44,0.35);
+    --radius-card:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, var(--felt-mid), transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, var(--felt-mid), transparent 55%),
+      var(--felt-deep);
+    color:var(--cream);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    line-height:1.5;
+  }
+  h1,h2,h3{ font-family:'Fraunces', serif; font-weight:600; margin:0; }
+  a{ color:var(--gold); }
+  .wrap{ max-width:960px; margin:0 auto; padding:28px 20px 80px; }
+
+  /* ---------- Header ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom:18px; margin-bottom:34px;
+    border-bottom:1px solid var(--brass-line);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand .suits{ letter-spacing:3px; color:var(--gold); font-size:14px; }
+  .brand h1{ font-size:22px; color:var(--cream); }
+  .userbadge{ display:flex; align-items:center; gap:12px; font-size:14px; color:var(--cream-dim); }
+  .btn{
+    font-family:'IBM Plex Sans', sans-serif;
+    border:1px solid var(--brass-line);
+    background:transparent; color:var(--cream);
+    padding:9px 16px; border-radius:999px; cursor:pointer;
+    font-size:14px; font-weight:500;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .btn:hover{ border-color:var(--gold); }
+  .btn-gold{
+    background:var(--gold); border-color:var(--gold); color:#241a05; font-weight:600;
+  }
+  .btn-gold:hover{ background:var(--gold-deep); border-color:var(--gold-deep); }
+  .btn-ghost-red{ border-color:rgba(166,61,64,.5); color:#e3a2a4; }
+  .btn-ghost-red:hover{ border-color:var(--red-suit); }
+
+  /* ---------- Hero ---------- */
+  .hero{ text-align:center; margin:8px 0 42px; }
+  .hero .suitmark{ font-size:26px; color:var(--gold); letter-spacing:10px; margin-bottom:10px; }
+  .hero h2{ font-size:clamp(28px,5vw,42px); color:var(--cream); }
+  .hero p{ color:var(--cream-dim); margin-top:8px; font-size:15px; }
+
+  /* ---------- Card shell (used throughout) ---------- */
+  .card{
+    background:var(--cream);
+    color:var(--ink);
+    border-radius:var(--radius-card);
+    box-shadow:0 14px 30px rgba(0,0,0,.28);
+    position:relative;
+  }
+  .card::before{
+    content:"";
+    position:absolute; inset:7px;
+    border:1px solid rgba(28,27,23,.10);
+    border-radius:9px;
+    pointer-events:none;
+  }
+  .corner{
+    position:absolute; top:12px; left:14px;
+    font-family:'Fraunces', serif; font-weight:600; font-size:13px;
+    color:var(--ink-soft); line-height:1;
+  }
+  .corner span{ display:block; font-size:11px; margin-top:1px; }
+  .corner.red{ color:var(--red-suit); }
+
+  /* ---------- Auth ---------- */
+  .auth-card{ max-width:400px; margin:0 auto; padding:34px 30px 30px; }
+  .auth-card h2{ font-size:22px; margin-bottom:4px; }
+  .auth-card .sub{ color:var(--ink-soft); font-size:14px; margin-bottom:22px; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--ink-soft); }
+  .field input, .field select{
+    width:100%; padding:10px 12px; border-radius:8px;
+    border:1px solid #D8CFB6; background:#fff; color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif; font-size:14px;
+  }
+  .field input:focus, .field select:focus{ outline:2px solid var(--gold-deep); outline-offset:1px; }
+  .auth-actions{ display:flex; gap:10px; margin-top:20px; }
+  .auth-actions .btn{ flex:1; text-align:center; }
+  .auth-switch{ margin-top:16px; font-size:13px; color:var(--ink-soft); text-align:center; }
+  .auth-switch button{ background:none; border:none; color:var(--gold-deep); font-weight:600; cursor:pointer; padding:0; font-size:13px; }
+  .msg{ font-size:13px; margin-top:12px; padding:9px 12px; border-radius:8px; display:none; }
+  .msg.show{ display:block; }
+  .msg.error{ background:#f6dede; color:#7a2a2c; }
+  .msg.ok{ background:#dcefe2; color:#1f5c39; }
+
+  /* ---------- App layout ---------- */
+  .layout{ display:grid; grid-template-columns:280px 1fr; gap:22px; align-items:start; }
+  @media (max-width:720px){ .layout{ grid-template-columns:1fr; } }
+
+  .panel-title{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .panel-title h3{ font-size:16px; color:var(--cream-dim); font-weight:600; letter-spacing:.2px; }
+
+  /* Leaderboard */
+  .board{ padding:20px 18px; }
+  .board h3{ font-size:15px; color:var(--ink-soft); margin-bottom:14px; font-weight:600; }
+  .board-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:9px 0; border-bottom:1px solid #E4DBC2;
+  }
+  .board-row:last-child{ border-bottom:none; }
+  .board-name{ display:flex; align-items:center; gap:8px; font-weight:600; font-size:14px; }
+  .board-rank{ width:20px; height:20px; border-radius:50%; background:var(--felt-deep); color:var(--gold);
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+  .board-wins{ font-size:13px; color:var(--ink-soft); }
+  .empty-note{ font-size:13px; color:var(--ink-soft); padding:6px 0; }
+
+  /* New game */
+  .newgame-card{ padding:22px 22px 24px; margin-bottom:22px; }
+  .newgame-card h3{ font-size:16px; margin-bottom:2px; }
+  .newgame-card .sub{ color:var(--ink-soft); font-size:13px; margin-bottom:18px; }
+  .row-players{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+  .player-row{ display:grid; grid-template-columns:1fr 110px 34px; gap:8px; align-items:center; }
+  .player-row input, .player-row select{
+    padding:9px 10px; border-radius:8px; border:1px solid #D8CFB6; font-size:14px; font-family:inherit;
+  }
+  .remove-row{
+    background:none; border:none; color:var(--red-suit); font-size:18px; cursor:pointer; line-height:1;
+  }
+  .add-row-btn{
+    background:none; border:1px dashed #C9BC93; color:var(--ink-soft);
+    padding:8px 12px; border-radius:8px; font-size:13px; cursor:pointer; width:100%;
+    margin-bottom:16px; font-family:inherit;
+  }
+  .add-row-btn:hover{ border-color:var(--gold-deep); color:var(--gold-deep); }
+  .form-foot{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+  /* History */
+  .history-empty{ color:var(--cream-dim); font-size:14px; padding:20px 4px; }
+  .game-card{ padding:18px 20px 16px 60px; margin-bottom:14px; }
+  .game-card .date{ font-size:12px; text-transform:none; color:var(--ink-soft); font-weight:600; }
+  .game-card .note{ font-size:13px; color:var(--ink-soft); font-style:italic; margin:2px 0 10px; }
+  .players-line{ display:flex; flex-wrap:wrap; gap:8px 14px; margin-top:8px; }
+  .player-chip{ font-size:13px; display:flex; align-items:center; gap:6px; }
+  .player-chip .pos{ font-weight:700; color:var(--red-suit); }
+  .player-chip.winner .pos{ color:var(--gold-deep); }
+  .player-chip.winner .pname{ font-weight:700; }
+  .game-card-foot{ margin-top:12px; display:flex; justify-content:flex-end; }
+  .link-del{ background:none; border:none; color:var(--red-suit); font-size:12px; cursor:pointer; text-decoration:underline; padding:0; }
+
+  .hidden{ display:none !important; }
+  .toolbar-top{ display:flex; justify-content:flex-end; margin-bottom:16px; }
+  footer.note{ text-align:center; font-size:12px; color:var(--cream-dim); opacity:.6; margin-top:50px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="suits">♣ ♦ ♥ ♠</span>
+      <h1>Jenderal</h1>
+    </div>
+    <div class="userbadge" id="userBadge"></div>
+  </header>
+
+  <!-- ===================== AUTH VIEW ===================== -->
+  <main id="authView">
+    <div class="hero">
+      <div class="suitmark">♣ ♦ ♥ ♠</div>
+      <h2>Catat setiap kemenangan</h2>
+      <p>Masuk untuk mulai mencatat permainan Jenderal / Capsa Banting kelompokmu.</p>
+    </div>
+
+    <div class="card auth-card">
+      <div class="corner">J<span>♠</span></div>
+      <h2 id="authTitle">Masuk</h2>
+      <div class="sub" id="authSub">Masuk ke akunmu untuk melihat riwayat permainan.</div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="nama@email.com" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="password">Kata sandi</label>
+        <input id="password" type="password" placeholder="Minimal 6 karakter" autocomplete="current-password" />
+      </div>
+
+      <div class="msg" id="authMsg"></div>
+
+      <div class="auth-actions">
+        <button class="btn btn-gold" id="authSubmitBtn" style="flex:1">Masuk</button>
+      </div>
+      <div class="auth-switch">
+        <span id="authSwitchLabel">Belum punya akun?</span>
+        <button id="authSwitchBtn">Daftar di sini</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================== APP VIEW ===================== -->
+  <main id="appView" class="hidden">
+    <div class="hero">
+      <div class="suitmark">♣ ♦ ♥ ♠</div>
+      <h2>Meja Skor</h2>
+      <p>Rekap kemenangan dan riwayat setiap babak Jenderal.</p>
+    </div>
+
+    <div class="layout">
+      <!-- Sidebar: leaderboard -->
+      <aside>
+        <div class="card board">
+          <h3>Peringkat Pemenang</h3>
+          <div id="boardList"></div>
+        </div>
+      </aside>
+
+      <!-- Main: new game + history -->
+      <section>
+        <div class="toolbar-top">
+          <button class="btn btn-gold" id="toggleNewGameBtn">+ Catat Permainan Baru</button>
+        </div>
+
+        <div class="card newgame-card hidden" id="newGameCard">
+          <h3>Permainan Baru</h3>
+          <div class="sub">Urutkan pemain dari yang pertama habis kartu (juara) sampai terakhir.</div>
+
+          <div class="field" style="max-width:200px;">
+            <label for="playedAt">Tanggal</label>
+            <input type="date" id="playedAt" />
+          </div>
+
+          <div class="row-players" id="playerRows"></div>
+          <button class="add-row-btn" id="addPlayerRowBtn">+ Tambah pemain</button>
+
+          <div class="field">
+            <label for="gameNote">Catatan (opsional)</label>
+            <input id="gameNote" type="text" placeholder="cth. Bom kembar dua kali, seru banget" />
+          </div>
+
+          <div class="msg" id="gameMsg"></div>
+
+          <div class="form-foot">
+            <button class="btn btn-gold" id="saveGameBtn">Simpan Permainan</button>
+            <button class="btn" id="cancelNewGameBtn">Batal</button>
+          </div>
+        </div>
+
+        <div class="panel-title">
+          <h3>Riwayat Permainan</h3>
+        </div>
+        <div id="historyList">
+          <div class="history-empty">Memuat riwayat…</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="note">Jenderal / Capsa Banting — pencatat skor pribadi</footer>
+</div>
+
+<script>
+/* =====================================================================
+   KONFIGURASI SUPABASE — ganti dua nilai ini dengan milikmu sendiri.
+   Ambil dari: Supabase Dashboard → Project Settings → API
+   ===================================================================== */
+const SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+/* ===================================================================== */
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let authMode = "signin"; // or "signup"
+let playerRowCount = 0;
+
+// ---------- Elements ----------
+const authView = document.getElementById('authView');
+const appView = document.getElementById('appView');
+const userBadge = document.getElementById('userBadge');
+
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+const authTitle = document.getElementById('authTitle');
+const authSub = document.getElementById('authSub');
+const authSubmitBtn = document.getElementById('authSubmitBtn');
+const authSwitchLabel = document.getElementById('authSwitchLabel');
+const authSwitchBtn = document.getElementById('authSwitchBtn');
+const authMsg = document.getElementById('authMsg');
+
+const boardList = document.getElementById('boardList');
+const historyList = document.getElementById('historyList');
+
+const toggleNewGameBtn = document.getElementById('toggleNewGameBtn');
+const newGameCard = document.getElementById('newGameCard');
+const cancelNewGameBtn = document.getElementById('cancelNewGameBtn');
+const playerRows = document.getElementById('playerRows');
+const addPlayerRowBtn = document.getElementById('addPlayerRowBtn');
+const saveGameBtn = document.getElementById('saveGameBtn');
+const gameMsg = document.getElementById('gameMsg');
+const playedAtInput = document.getElementById('playedAt');
+const gameNoteInput = document.getElementById('gameNote');
+
+// ---------- Helpers ----------
+function showMsg(el, text, type){
+  el.textContent = text;
+  el.className = 'msg show ' + type;
+}
+function clearMsg(el){
+  el.className = 'msg';
+  el.textContent = '';
+}
+function ordinal(rank){
+  const labels = {1:'Juara I',2:'Juara II',3:'Juara III',4:'Juara IV',5:'Peringkat 5',6:'Peringkat 6',7:'Peringkat 7',8:'Peringkat 8'};
+  return labels[rank] || ('Peringkat ' + rank);
+}
+function formatDate(d){
+  const date = new Date(d + 'T00:00:00');
+  return date.toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' });
+}
+
+// ---------- Auth flow ----------
+authSwitchBtn.addEventListener('click', () => {
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  clearMsg(authMsg);
+  if (authMode === 'signup'){
+    authTitle.textContent = 'Daftar';
+    authSub.textContent = 'Buat akun baru untuk mulai mencatat permainan.';
+    authSubmitBtn.textContent = 'Daftar';
+    authSwitchLabel.textContent = 'Sudah punya akun?';
+    authSwitchBtn.textContent = 'Masuk di sini';
+  } else {
+    authTitle.textContent = 'Masuk';
+    authSub.textContent = 'Masuk ke akunmu untuk melihat riwayat permainan.';
+    authSubmitBtn.textContent = 'Masuk';
+    authSwitchLabel.textContent = 'Belum punya akun?';
+    authSwitchBtn.textContent = 'Daftar di sini';
+  }
+});
+
+authSubmitBtn.addEventListener('click', async () => {
+  clearMsg(authMsg);
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+  if (!email || !password){
+    showMsg(authMsg, 'Isi email dan kata sandi dulu ya.', 'error');
+    return;
+  }
+  authSubmitBtn.disabled = true;
+  try{
+    if (authMode === 'signup'){
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      showMsg(authMsg, 'Akun dibuat. Cek email untuk konfirmasi (jika diaktifkan), lalu masuk.', 'ok');
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    }
+  } catch(err){
+    showMsg(authMsg, err.message || 'Terjadi kesalahan.', 'error');
+  } finally {
+    authSubmitBtn.disabled = false;
+  }
+});
+
+async function signOut(){
+  await supabase.auth.signOut();
+}
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  currentUser = session ? session.user : null;
+  renderAuthState();
+  if (currentUser) loadEverything();
+});
+
+function renderAuthState(){
+  if (currentUser){
+    authView.classList.add('hidden');
+    appView.classList.remove('hidden');
+    userBadge.innerHTML = `<span>${currentUser.email}</span><button class="btn" id="signOutBtn">Keluar</button>`;
+    document.getElementById('signOutBtn').addEventListener('click', signOut);
+  } else {
+    authView.classList.remove('hidden');
+    appView.classList.add('hidden');
+    userBadge.innerHTML = '';
+  }
+}
+
+// ---------- New game form ----------
+function makePlayerRow(name = '', rank = null){
+  playerRowCount += 1;
+  const id = 'row_' + playerRowCount;
+  const row = document.createElement('div');
+  row.className = 'player-row';
+  row.dataset.id = id;
+  row.innerHTML = `
+    <input type="text" placeholder="Nama pemain" class="pname-input" value="${name}" />
+    <select class="prank-input"></select>
+    <button class="remove-row" title="Hapus baris" type="button">&times;</button>
+  `;
+  playerRows.appendChild(row);
+  row.querySelector('.remove-row').addEventListener('click', () => {
+    row.remove();
+    refreshRankOptions();
+  });
+  refreshRankOptions();
+  if (rank) row.querySelector('.prank-input').value = rank;
+  return row;
+}
+
+function refreshRankOptions(){
+  const rows = [...playerRows.querySelectorAll('.player-row')];
+  rows.forEach(row => {
+    const select = row.querySelector('.prank-input');
+    const prev = select.value;
+    select.innerHTML = '';
+    rows.forEach((_, i) => {
+      const opt = document.createElement('option');
+      opt.value = i + 1;
+      opt.textContent = ordinal(i + 1);
+      select.appendChild(opt);
+    });
+    if (prev && Number(prev) <= rows.length) select.value = prev;
+  });
+}
+
+function resetNewGameForm(){
+  playerRows.innerHTML = '';
+  playerRowCount = 0;
+  for (let i = 0; i < 4; i++) makePlayerRow();
+  playedAtInput.value = new Date().toISOString().slice(0,10);
+  gameNoteInput.value = '';
+  clearMsg(gameMsg);
+}
+
+toggleNewGameBtn.addEventListener('click', () => {
+  newGameCard.classList.remove('hidden');
+  toggleNewGameBtn.classList.add('hidden');
+  resetNewGameForm();
+});
+cancelNewGameBtn.addEventListener('click', () => {
+  newGameCard.classList.add('hidden');
+  toggleNewGameBtn.classList.remove('hidden');
+});
+addPlayerRowBtn.addEventListener('click', () => makePlayerRow());
+
+saveGameBtn.addEventListener('click', async () => {
+  clearMsg(gameMsg);
+  const rows = [...playerRows.querySelectorAll('.player-row')];
+  if (rows.length < 2){
+    showMsg(gameMsg, 'Minimal 2 pemain ya.', 'error');
+    return;
+  }
+  const entries = rows.map(row => ({
+    player_name: row.querySelector('.pname-input').value.trim(),
+    rank: Number(row.querySelector('.prank-input').value)
+  }));
+  if (entries.some(e => !e.player_name)){
+    showMsg(gameMsg, 'Semua nama pemain wajib diisi.', 'error');
+    return;
+  }
+  const ranks = entries.map(e => e.rank);
+  if (new Set(ranks).size !== ranks.length){
+    showMsg(gameMsg, 'Tiap pemain harus punya peringkat yang berbeda.', 'error');
+    return;
+  }
+  if (!playedAtInput.value){
+    showMsg(gameMsg, 'Isi tanggal permainan.', 'error');
+    return;
+  }
+
+  saveGameBtn.disabled = true;
+  try{
+    const { data: game, error: gameErr } = await supabase
+      .from('games')
+      .insert({
+        created_by: currentUser.id,
+        played_at: playedAtInput.value,
+        note: gameNoteInput.value.trim() || null
+      })
+      .select()
+      .single();
+    if (gameErr) throw gameErr;
+
+    const rowsToInsert = entries.map(e => ({
+      game_id: game.id,
+      player_name: e.player_name,
+      rank: e.rank
+    }));
+    const { error: playersErr } = await supabase.from('game_players').insert(rowsToInsert);
+    if (playersErr) throw playersErr;
+
+    newGameCard.classList.add('hidden');
+    toggleNewGameBtn.classList.remove('hidden');
+    await loadEverything();
+  } catch(err){
+    showMsg(gameMsg, err.message || 'Gagal menyimpan permainan.', 'error');
+  } finally {
+    saveGameBtn.disabled = false;
+  }
+});
+
+// ---------- Load + render data ----------
+async function loadEverything(){
+  historyList.innerHTML = '<div class="history-empty">Memuat riwayat…</div>';
+  const { data, error } = await supabase
+    .from('games')
+    .select('*, game_players(*)')
+    .eq('created_by', currentUser.id)
+    .order('played_at', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (error){
+    historyList.innerHTML = `<div class="history-empty">Gagal memuat: ${error.message}</div>`;
+    return;
+  }
+  renderLeaderboard(data || []);
+  renderHistory(data || []);
+}
+
+function renderLeaderboard(games){
+  const stats = {}; // name -> { wins, played }
+  games.forEach(g => {
+    (g.game_players || []).forEach(p => {
+      if (!stats[p.player_name]) stats[p.player_name] = { wins: 0, played: 0 };
+      stats[p.player_name].played += 1;
+      if (p.rank === 1) stats[p.player_name].wins += 1;
+    });
+  });
+  const list = Object.entries(stats).sort((a, b) => b[1].wins - a[1].wins || b[1].played - a[1].played);
+
+  if (list.length === 0){
+    boardList.innerHTML = '<div class="empty-note">Belum ada data. Catat permainan pertamamu!</div>';
+    return;
+  }
+  boardList.innerHTML = list.map(([name, s], i) => `
+    <div class="board-row">
+      <div class="board-name"><span class="board-rank">${i+1}</span> ${escapeHtml(name)}</div>
+      <div class="board-wins">${s.wins} menang · ${s.played} main</div>
+    </div>
+  `).join('');
+}
+
+function renderHistory(games){
+  if (games.length === 0){
+    historyList.innerHTML = '<div class="history-empty">Belum ada permainan tercatat. Klik "Catat Permainan Baru" untuk mulai.</div>';
+    return;
+  }
+  historyList.innerHTML = games.map(g => {
+    const players = [...(g.game_players || [])].sort((a,b) => a.rank - b.rank);
+    const chips = players.map(p => `
+      <span class="player-chip ${p.rank === 1 ? 'winner' : ''}">
+        <span class="pos">${p.rank}.</span>
+        <span class="pname">${escapeHtml(p.player_name)}</span>
+      </span>
+    `).join('');
+    return `
+      <div class="card game-card">
+        <div class="corner ${players[0] ? 'red' : ''}">${new Date(g.played_at).getDate()}<span>${new Date(g.played_at).toLocaleDateString('id-ID',{month:'short'})}</span></div>
+        <div class="date">${formatDate(g.played_at)}</div>
+        ${g.note ? `<div class="note">“${escapeHtml(g.note)}”</div>` : ''}
+        <div class="players-line">${chips}</div>
+        <div class="game-card-foot">
+          <button class="link-del" data-id="${g.id}">Hapus</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  historyList.querySelectorAll('.link-del').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Hapus catatan permainan ini?')) return;
+      const { error } = await supabase.from('games').delete().eq('id', btn.dataset.id);
+      if (error){ alert('Gagal menghapus: ' + error.message); return; }
+      await loadEverything();
+    });
+  });
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ---------- Init ----------
+(async function init(){
+  const { data: { session } } = await supabase.auth.getSession();
+  currentUser = session ? session.user : null;
+  renderAuthState();
+  if (currentUser) loadEverything();
+})();
+</script>
+</body>
+</html>
